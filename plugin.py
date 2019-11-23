@@ -27,7 +27,7 @@ class plugin:
 	def generateIdentityTag(self, addr):
 		Domoticz.Log('Generating device tag for : '+addr)
 		ips = addr.split('.')
-		identity = ips[1] + ips[2] + ips[3] # use ip address without 1st prefix as unique identify to aboid conflict
+		identity = ips[1] + ips[2] + ips[3] # use ip address without 1st prefix as unique identify to avoid conflict
 
 		return identity
 
