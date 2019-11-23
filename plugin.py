@@ -6,7 +6,6 @@
 <plugin key="Phicomm-DC1" name="Phicomm DC1 Plug" author="Eric" version="1.0.0" externallink="https://github.com/EricInBj/Phicomm-DC1">
 	<params>
         <param field="Mode1" label="更新频率(秒)" width="30px" required="true" default="30"/>
-	<param field="Mode2" label="多设备设置" width="300px" required="true" default="{'45':'fish','46':'cat'}"/>
     </params>
 </plugin>
 """
@@ -26,22 +25,25 @@ class plugin:
 	
 
 	def generateIdentityTag(self, addr):
-		Domoticz.Log('gen tag for : '+addr)
-		identity = addr.split('.')[3] #取IP地址最后一段作为设备ID
+		Domoticz.Log('Generating device tag for : '+addr)
+		ips = addr.split('.')
+		identity = ips[1] + ips[2] + ips[3] # use ip address without 1st prefix as unique identify to aboid conflict
+
 		return identity
 
 
 	def idx_to_key(self, arg):
 		keys = {
-		1: {'name':u"总开关", 'type':'Switch'},
-		2: {'name':u"一位", 'type':'Switch'},
-		3: {'name':u"二位", 'type':'Switch'},
-		4: {'name':u"三位", 'type':'Switch'},
-		5: {'name':u'电压', 'type':'Voltage'}#,
-		#6: {'name':u'功率', 'type':'Kwh'}
+		0: {'name':u"总开关", 'type':'Switch'},
+		1: {'name':u"一位", 'type':'Switch'},
+		2: {'name':u"二位", 'type':'Switch'},
+		3: {'name':u"三位", 'type':'Switch'},
+		4: {'name':u'电压', 'type':'Voltage'}#,
+		#5: {'name':u'功率', 'type':'Kwh'}
 		}    
 		return keys.get(arg, {'name':u"总开关", 'type':'Switch'})
 	
+
 	def deviceid_to_name(self, deviceTag):
 		if deviceTag in self.devicesMap.keys():
 			return self.devicesMap[deviceTag]
@@ -51,28 +53,33 @@ class plugin:
 
 
 	def createDevices(self, deviceTag):
-		#Create four switch
-		for i in range(1,6):
+		#Create five devices (include 4 switches and 1 voltage sensor)
+		Domoticz.Debug("Devices count: " + str(len(Devices)))
+		for i in range(0,5):
+			deviceID = deviceTag + str(i)
 			unitid = len(Devices) + 1
-			if self.getExistDevice(deviceTag+str(i)) == None:
+
+			if self.getExistDevice(deviceID) == None:
 				Domoticz.Device(
-					DeviceID=deviceTag+str(i), Name= '%s_%s' %(self.deviceid_to_name(deviceTag), self.idx_to_key(i)['name']),  
+					DeviceID=deviceID, Name= '%s_%s' %(self.deviceid_to_name(deviceTag), self.idx_to_key(i)['name']),  
 					Unit=unitid, TypeName=self.idx_to_key(i)['type'], Used=1
 				).Create()
+
 
 	def updateDevices(self, deviceTag, data):
 		switchStatus = str(data['status']).zfill(4)[::-1]
 		for i in range(0,4):
-			deviceid = deviceTag + str(i+1)
+			deviceID = deviceTag + str(i)
 
 			value = 'On' if switchStatus[i:i+1] == '1' else 'Off'
-			self.updateDevice(deviceid, int(switchStatus[i:i+1]), value)
+			self.updateDevice(deviceID, int(switchStatus[i:i+1]), value)
 
-		self.updateDevice(deviceTag + str(4+1), int(data['V']), data['V'])
-		self.updateDevice(deviceTag + str(5+1), int(data['P']), data['P'])
+		self.updateDevice(deviceTag + str(4), int(data['V']), data['V'])
+		#self.updateDevice(deviceTag + str(5+1), int(data['P']), data['P'])
 
 		return None
 		
+
 	def updateDevice(self, deviceid, nValue, sValue):
 		device = self.getExistDevice(deviceid)
 		if device is not None:
@@ -81,17 +88,20 @@ class plugin:
 				Domoticz.Log("Update "+str(nValue)+":'"+str(sValue)+"' ("+device.Name+")")
 		return None
 
+
 	def getExistDevice(self, identity):
 		for x in Devices:
 			if str(Devices[x].DeviceID) == identity:
 				return Devices[x]
 		return None
 
+
 	def checkState(self, deviceTag):
 		if deviceTag in self.clientConns:
 			conn = self.clientConns[deviceTag]
 			if conn != None:
 				conn.Send(bytes('{"uuid":"T%s","params":{ },"auth":"","action":"datapoint"}\n' % str(round(time.time() * 1000)),encoding="utf8"))
+
 
 	def onStart(self):
 
@@ -102,14 +112,16 @@ class plugin:
 		self.serverConn = Domoticz.Connection(Name="Data Connection", Transport="TCP/IP", Protocol="line", Port="8000")
 		self.serverConn.Listen()
 
-		self.createDevices('45')
+		#self.createDevices('45')
 
 		Domoticz.Log("successfully listen at: "+self.serverConn.Address+":"+self.serverConn.Port)
+
 
 	def onStop(self):
 		Domoticz.Log("onStop called")
 		if self.serverConn.Connected():
 			self.serverConn.Disconnect()
+
 
 	def onConnect(self, Connection, Status, Description):
 		if (Status == 0):
@@ -121,9 +133,10 @@ class plugin:
 
 		Domoticz.Log(str(Connection))
 		identityTag = self.generateIdentityTag(Connection.Address)
-		Domoticz.Log(identityTag)
+		Domoticz.Log("Generated device tag: " + identityTag)
 		
 		self.clientConns[identityTag] = Connection
+
 
 	def onMessage(self, Connection, Data):
 		try:
@@ -132,15 +145,15 @@ class plugin:
 			Domoticz.Log("onMessage called for connection: "+Connection.Address+":"+Connection.Port)	
 			Domoticz.Log("Data: "+bytes.decode(Data))	
 			data = json.loads(bytes.decode(Data))
-			deviceId = self.generateIdentityTag(Connection.Address)
+			deviceTag = self.generateIdentityTag(Connection.Address)
 			
 			if 'action' in data.keys():
 				#new connection from dc1, create devices
-				self.createDevices(deviceId)
+				self.createDevices(deviceTag)
 
 			elif 'status' in data.keys() and data['status'] == 200:
 				#data from dc1, update devices
-				self.updateDevices(deviceId, data['result']) #result":{"status":1011,"I":129,"V":223,"P":22}
+				self.updateDevices(deviceTag, data['result']) #result":{"status":1011,"I":129,"V":223,"P":22}
 		except Exception as ex:
 			Domoticz.Log(str(ex))
 
