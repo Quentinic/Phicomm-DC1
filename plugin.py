@@ -39,7 +39,7 @@ class plugin:
 		2: {'name':u"二位", 'type':'Switch'},
 		3: {'name':u"三位", 'type':'Switch'},
 		4: {'name':u'电压', 'type':'Voltage'},
-        5: {'name':u'功率', 'type':'kWh'}
+		5: {'name':u'功率', 'type':'kWh'}
 		}    
 		return keys.get(arg, {'name':u"总开关", 'type':'Switch'})
 	
@@ -62,7 +62,7 @@ class plugin:
 			if self.getExistDevice(deviceID) == None:
 				options = {}
 				if self.idx_to_key(i)['type'] == 'kWh':
-                    options['EnergyMeterMode'] = '1'
+					options['EnergyMeterMode'] = '1'
 
 					Domoticz.Device(
 						DeviceID=deviceID, Name= '%s_%s' %(self.deviceid_to_name(deviceTag), self.idx_to_key(i)['name']),  
@@ -85,7 +85,7 @@ class plugin:
 
 		self.updateDevice(deviceTag + str(4), int(data['V']), data['V'])
 		#self.updateDevice(deviceTag + str(5), int(data['P']), data['P'])
-        self.updateDevice(deviceTag + str(5), 0, str(data['P']) + ';0')
+		self.updateDevice(deviceTag + str(5), 0, str(data['P']) + ';0')
 
 		return None
 		
