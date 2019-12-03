@@ -38,8 +38,8 @@ class plugin:
 		1: {'name':u"一位", 'type':'Switch'},
 		2: {'name':u"二位", 'type':'Switch'},
 		3: {'name':u"三位", 'type':'Switch'},
-		4: {'name':u'电压', 'type':'Voltage'}#,
-		#5: {'name':u'功率', 'type':'Kwh'}
+		4: {'name':u'电压', 'type':'Voltage'},
+        5: {'name':u'功率', 'type':'kWh'}
 		}    
 		return keys.get(arg, {'name':u"总开关", 'type':'Switch'})
 	
@@ -53,17 +53,26 @@ class plugin:
 
 
 	def createDevices(self, deviceTag):
-		#Create five devices (include 4 switches and 1 voltage sensor)
+		#Create 6 devices (include 4 switches and 1 voltage device, 1 Kwh device)
 		Domoticz.Debug("Devices count: " + str(len(Devices)))
-		for i in range(0,5):
+		for i in range(0,6):
 			deviceID = deviceTag + str(i)
 			unitid = len(Devices) + 1
 
 			if self.getExistDevice(deviceID) == None:
-				Domoticz.Device(
-					DeviceID=deviceID, Name= '%s_%s' %(self.deviceid_to_name(deviceTag), self.idx_to_key(i)['name']),  
-					Unit=unitid, TypeName=self.idx_to_key(i)['type'], Used=1
-				).Create()
+				options = {}
+				if self.idx_to_key(i)['type'] == 'kWh':
+                    options['EnergyMeterMode'] = '1'
+
+					Domoticz.Device(
+						DeviceID=deviceID, Name= '%s_%s' %(self.deviceid_to_name(deviceTag), self.idx_to_key(i)['name']),  
+						Unit=unitid, TypeName=self.idx_to_key(i)['type'], Options=options, Used=1
+					).Create()
+				else:
+					Domoticz.Device(
+						DeviceID=deviceID, Name= '%s_%s' %(self.deviceid_to_name(deviceTag), self.idx_to_key(i)['name']),  
+						Unit=unitid, TypeName=self.idx_to_key(i)['type'], Used=1
+					).Create()
 
 
 	def updateDevices(self, deviceTag, data):
@@ -75,7 +84,8 @@ class plugin:
 			self.updateDevice(deviceID, int(switchStatus[i:i+1]), value)
 
 		self.updateDevice(deviceTag + str(4), int(data['V']), data['V'])
-		#self.updateDevice(deviceTag + str(5+1), int(data['P']), data['P'])
+		#self.updateDevice(deviceTag + str(5), int(data['P']), data['P'])
+        self.updateDevice(deviceTag + str(5), 0, str(data['P']) + ';0')
 
 		return None
 		
@@ -165,7 +175,7 @@ class plugin:
 		deviceTag = deviceid[0:len(deviceid)-1]
 		switchIdx = (Unit-1) % 5
 		deviceIdx = Unit//5
-		Domoticz.Log('Unit:%s, deviceTag: %s, wtitchIdx:%s, deviceIdx:%s'%(Unit, deviceTag, switchIdx, deviceIdx))
+		Domoticz.Log('Unit:%s, deviceTag: %s, wtitchIdx: %s, deviceIdx: %s'%(Unit, deviceTag, switchIdx, deviceIdx))
 		if deviceTag in self.clientConns:
 			conn = self.clientConns[deviceTag]
 			if conn != None:
