@@ -1,6 +1,12 @@
 # Phicomm-DC1
 Phicomm DC1 plugin for Domoticz
 
+update-20191203:
+
+Allow to add a kWh device.
+
+---
+
 将Phicomm-DC1 目录放置在 Domoticz 的 Plugins目录下，在 Domoticz 中添加硬件
 
 可以配置状态更新间隔，以及插座的名字，格式为 {'45':'fish','46':'cat'}， 45，46 为DC1的IP地址最后一段，fish cat则为显示名字。
