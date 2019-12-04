@@ -199,7 +199,7 @@ class plugin:
 					i |= 0b1
 					
 				if Command == 'Off':
-					i &= ~(1 << int(identityID)
+					i &= ~(1 << int(identityID)）
 				else:
 					i |= 1 << int(identityID)
 
