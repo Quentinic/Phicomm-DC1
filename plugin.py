@@ -59,10 +59,10 @@ class plugin:
 			deviceID = deviceTag + str(i)
 			unitid = len(Devices) + 1
 
-			if self.getExistDevice(deviceID) == None:
+			if self.getExistingDevice(deviceID) == None:
 				options = {}
 				if self.idx_to_key(i)['type'] == 'kWh':
-					options['EnergyMeterMode'] = '1'
+					#options['EnergyMeterMode'] = '1'
 
 					Domoticz.Device(
 						DeviceID=deviceID, Name= '%s_%s' %(self.deviceid_to_name(deviceTag), self.idx_to_key(i)['name']),  
@@ -85,21 +85,21 @@ class plugin:
 
 		self.updateDevice(deviceTag + str(4), int(data['V']), data['V'])
 		#self.updateDevice(deviceTag + str(5), int(data['P']), data['P'])
-		self.updateDevice(deviceTag + str(5), 0, str(data['P']) + ';0')
+		self.updateDevice(deviceTag + str(5), 0, str(data['P']) + ';' + str(int(data['p']) / 1000))
 
 		return None
 		
 
 	def updateDevice(self, deviceid, nValue, sValue):
-		device = self.getExistDevice(deviceid)
+		device = self.getExistingDevice(deviceid)
 		if device is not None:
 			if (device.nValue != nValue) or (device.sValue != sValue):
 				device.Update(nValue=nValue, sValue=str(sValue))
-				Domoticz.Log("Update "+str(nValue)+":'"+str(sValue)+"' ("+device.Name+")")
+				Domoticz.Log("Update "+str(nValue)+":'"+str(sValue)+"' for ("+device.Name+")")
 		return None
 
 
-	def getExistDevice(self, identity):
+	def getExistingDevice(self, identity):
 		for x in Devices:
 			if str(Devices[x].DeviceID) == identity:
 				return Devices[x]
@@ -170,33 +170,43 @@ class plugin:
 
 	def onCommand(self, Unit, Command, Level, Hue):
 		Domoticz.Log("onCommand called for Unit " + str(Unit) + ": Parameter '" + str(Command) + "', Level: " + str(Level))
-		deviceid = Devices[Unit].DeviceID
+		deviceID = Devices[Unit].DeviceID
 
-		deviceTag = deviceid[0:len(deviceid)-1]
-		switchIdx = (Unit-1) % 5
-		deviceIdx = Unit//5
-		Domoticz.Log('Unit:%s, deviceTag: %s, wtitchIdx: %s, deviceIdx: %s'%(Unit, deviceTag, switchIdx, deviceIdx))
+		# identifier for a single phicomm smart plug
+		deviceTag = deviceID[0:len(deviceID) - 1]
+		# get the device identity id which stands for device type. 0 - Main Switch, 1 - No.1 switch, 2 - No.2 switch, 3 - No.3 switch
+		identityID = deviceID[-1]
+
+		Domoticz.Log('Unit: %s, DeviceTag: %s, DeviceID: %s, IdentityID: %s'%(Unit, deviceTag, deviceID, identityID))
+
 		if deviceTag in self.clientConns:
 			conn = self.clientConns[deviceTag]
 			if conn != None:
 				uuid = int(round(time.time() * 1000))
+
 				i = 0
-				if Devices[deviceIdx*5+4].nValue == 1:
+				# No.3 switch
+				if self.getExistingDevice(deviceTag + str(3)).nValue == 1:
 					i |= 0b1000
-				if Devices[deviceIdx*5+3].nValue == 1:
+				# No.2 switch
+				if self.getExistingDevice(deviceTag + str(2)).nValue == 1:
 					i |= 0b100
-				if Devices[deviceIdx*5+2].nValue == 1:
+				# No.1 switch
+				if self.getExistingDevice(deviceTag + str(1)).nValue == 1:
 					i |= 0b10
-				if Devices[deviceIdx*5+1].nValue == 1:
+				# Main Switch
+				if self.getExistingDevice(deviceTag + str(0)).nValue == 1:
 					i |= 0b1
 					
 				if Command == 'Off':
-					i &= ~(1 << switchIdx)
+					i &= ~(1 << identityID)
 				else:
-					i |= 1 << switchIdx
+					i |= 1 << identityID
+
 				strT = bin(int(i))
-				Domoticz.Log('strT:%s, i:%d'%(strT, i))
+				Domoticz.Log('strT: %s, i: %d'%(strT, i))
 				strT = strT[2:len(strT)]
+
 				payload = bytes(
 					'{"action":"datapoint=","params":{"status":' + str(strT) + '},"uuid":"' + str(uuid) + '","auth":""}\n',
 					encoding="utf8")

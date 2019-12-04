@@ -1,6 +1,14 @@
 # Phicomm-DC1
 Phicomm DC1 plugin for Domoticz
 
+
+update-20191204:
+
++ Update to get existing device by device id instead of by unit which maybe not consistent if there're multiple smart plugs connected to domoticz
++ Other minor updates.
+
+
+
 update-20191203:
 
 Allow to add a kWh device.
