@@ -199,9 +199,9 @@ class plugin:
 					i |= 0b1
 					
 				if Command == 'Off':
-					i &= ~(1 << identityID)
+					i &= ~(1 << int(identityID)
 				else:
-					i |= 1 << identityID
+					i |= 1 << int(identityID)
 
 				strT = bin(int(i))
 				Domoticz.Log('strT: %s, i: %d'%(strT, i))
