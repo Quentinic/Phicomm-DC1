@@ -85,7 +85,7 @@ class plugin:
 
 		self.updateDevice(deviceTag + str(4), int(data['V']), data['V'])
 		#self.updateDevice(deviceTag + str(5), int(data['P']), data['P'])
-		self.updateDevice(deviceTag + str(5), 0, str(data['P']) + ';' + str(int(data['P']) / 1000))
+		self.updateDevice(deviceTag + str(5), 0, str(data['P']) + ';' + str(data['P']))
 
 		return None
 		
